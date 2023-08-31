@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Live Stream</title>
+</head>
+<body>
+    <h1>Camera Live Stream</h1>
+    <video id="videoPlayer" autoplay playsinline></video>
+    
+    <script>
+        const videoPlayer = document.getElementById('videoPlayer');
+        let wsParam1 = '';  // 初始化为一个空字符串
+        let wsParam2 = '';  // 初始化为一个空字符串
+
+        // 获取用户摄像头权限
+        async function startStreaming() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                videoPlayer.srcObject = stream;
+                return stream;
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+            }
+        }
+
+        function extractParametersFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            wsParam1 = urlParams.get('exam_id');  // 将exam_id参数赋给wsParam1
+            wsParam2 = urlParams.get('stu_id');   // 将stu_id参数赋给wsParam2
+        }
+
+        startStreaming().then((stream) => {
+            console.log('start setting up web socket');
+            extractParametersFromURL();  // 提取参数值并赋值给wsParam1和wsParam2
+            setupWebSocket(stream, wsParam1, wsParam2);
+        });
+
+        function setupWebSocket(stream, wsParam1, wsParam2) {
+            console.log('stream is', stream);
+            try {
+                const wsParams = `${wsParam1},${wsParam2}`;
+                const wsUrl = `wss://47.103.117.247:3000/${wsParams}`;
+				console.log('wsUrl is', wsUrl);
+                const ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    console.log('WebSocket connection opened');
+                    startStreamingToWebSocket(stream, ws);
+                };
+
+                ws.onclose = () => {
+                    console.log('WebSocket connection closed');
+                };
+            } catch (error) {
+                console.error('WebSocket connection initialization error:', error);
+            }
+        }
+
+        function startStreamingToWebSocket(stream, ws) {
+            const mimeType = 'video/webm';
+            const videoBitsPerSecond = 2000000;
+
+            const mediaRecorderOptions = { mimeType, videoBitsPerSecond };
+            const mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
+
+            console.log('I am in startStreamingtoWebSocket');
+            mediaRecorder.ondataavailable = (event) => {
+                console.log('mediaRecorder.ondataavailable is on');
+                if (event.data.size > 0) {
+                    console.log('Sending video data to WebSocket server');
+                    ws.send(event.data);
+                } else {
+                    console.log('event.data.size is', event.data.size);
+                }
+            };
+
+            mediaRecorder.start(1000);
+        }
+    </script>
+</body>
+</html>

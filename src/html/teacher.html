@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Streaming with hls.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <h1>Video Streaming with hls.js</h1>
+    <video id="videoPlayer" controls autoplay playsinline></video>
+    
+    <script>
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoUrl = 'https://www.webrtcpull.website/app/test.m3u8';
+
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(videoUrl);
+            hls.attachMedia(videoPlayer);
+        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+            videoPlayer.src = videoUrl;
+        } else {
+            console.error('HLS is not supported in this browser.');
+        }
+    </script>
+</body>
+</html>
