@@ -46,9 +46,8 @@ if (isMainThread) {
 
     parentPort.on('message', (message) => {
         if (message === 'close') {
-            if (ffmpegProcess) {
-                ffmpegProcess.stdin.end();
-                ffmpegProcess = null;
+            if (ffmpegProcess && ffmpegProcess.stdin) {
+                ffmpegProcess.stdin.end(); // 确保 stdin 存在再关闭
             }
         } else if (message instanceof Uint8Array) {
             if (!ffmpegProcess) {
@@ -67,9 +66,11 @@ if (isMainThread) {
                 });
             }
 
-            ffmpegProcess.stdin.write(message);
-            console.log('推流地址', rtmpUrl);
-            console.log('推流成功', message);
+            if (ffmpegProcess && ffmpegProcess.stdin) {
+                ffmpegProcess.stdin.write(message);
+                console.log('推流地址', rtmpUrl);
+                console.log('推流成功', message);
+            }
         }
     });
 }

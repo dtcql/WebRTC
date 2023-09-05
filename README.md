@@ -58,3 +58,15 @@ sudo yum install ffmpeg
 index.html
 
 ## 3.后端代码
+
+* 安装pm2
+```
+npm install pm2 -g
+```
+常用命令 pm2 start/stop/list/restart/delete/logs
+
+* 安装依赖
+```
+npm init -y
+npm install express,cors等
+```

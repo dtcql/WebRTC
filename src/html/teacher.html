@@ -3,26 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Streaming with hls.js</title>
+    <title>在线监考教师端</title>
+    <style>
+        body {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0;
+            padding: 0;
+            align-content: flex-start;
+        }
+
+        #videos-container {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .video-container {
+            width: calc(33.33%);
+            position: relative;
+        }
+
+        @media (max-width: 900px) {
+            .video-container {
+                width: calc(50%);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .video-container {
+                width: calc(100%);
+            }
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .student-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background-color: blue;
+            color: white;
+            padding: 5px;
+            font-size: 12px;
+            z-index: 1;
+        }
+
+        .detection-status {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: green;
+            color: white;
+            padding: 5px;
+            font-size: 12px;
+            z-index: 1;
+        }
+
+        #response-container {
+            text-align: center;
+            color: red;
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-    <h1>Video Streaming with hls.js</h1>
-    <video id="videoPlayer" controls autoplay playsinline></video>
-    
-    <script>
-        const videoPlayer = document.getElementById('videoPlayer');
-        const videoUrl = 'https://www.webrtcpull.website/app/test.m3u8';
+    <div id="response-container"></div>
 
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(videoUrl);
-            hls.attachMedia(videoPlayer);
-        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-            videoPlayer.src = videoUrl;
-        } else {
-            console.error('HLS is not supported in this browser.');
-        }
+    <div id="videos-container" style="display: flex; flex-wrap: wrap;"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const appParam = urlParams.get('exam_id');
+            const roomSize = parseInt(urlParams.get('room_size')) || 1;
+
+            // Array to store student data
+            const studentDataArray = [];
+
+            // Function to send request to API and display response
+            const fetchAndDisplayAPIResponse = async () => {
+                const responseContainer = document.getElementById('response-container');
+                try {
+                    const apiResponse = await fetch(`https://47.103.117.247:1818?exam_id=${appParam}&room_size=${roomSize}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const responseData = await apiResponse.json();
+
+                    // Generate output based on responseData and set it directly to responseContainer.textContent
+                    let responseText = '';
+					let studentOutput = '';
+
+                    for (const studentId in responseData) {
+		                const studentData = responseData[studentId];
+						if (studentData.phone === 1) {
+                          studentOutput = `${studentId}: 在打电话 \n`;
+						  responseText += studentOutput + '\n';
+						}
+					    if (studentData.earphone === 1){
+						  studentOutput = `${studentId}: 在带耳机 \n`;
+                          responseText += studentOutput + '\n';
+						}
+						
+
+                        // Store student data in the array
+                        studentDataArray[studentId] = studentData;
+                    }
+                    
+					//warning information on top of the page to alert 
+                    responseContainer.textContent = responseText;
+
+                    // Get an array of student IDs from studentDataArray
+                    const studentIds = Object.keys(studentDataArray);
+
+                    // Iterate through video containers and set detection status using stored student data
+                    const videoContainers = document.querySelectorAll('.video-container');
+                    videoContainers.forEach((container, index) => {
+                        const studentId = studentIds[index];
+                        const studentData = studentDataArray[studentId];
+                        const detectionStatus = document.createElement('div');
+                        detectionStatus.classList.add('detection-status');
+                        if (studentData) {
+                            const phone = studentData.phone;
+                            const earphone = studentData.earphone;
+
+                            if (phone === 1) {
+                                detectionStatus.textContent = '在打电话';
+                                detectionStatus.style.backgroundColor = 'red';
+                            } else if (earphone === 1) {
+                                detectionStatus.textContent = '在带耳机';
+                                detectionStatus.style.backgroundColor = 'red';
+                            } else if (phone === 2) {
+                                detectionStatus.textContent = 'AI Error';
+                                detectionStatus.style.backgroundColor = 'orange';
+                            } else {
+                                detectionStatus.textContent = '检测正常';
+                                detectionStatus.style.backgroundColor = 'green';
+                            }
+                        } else {
+                            detectionStatus.textContent = '无数据';
+                            detectionStatus.style.backgroundColor = 'gray';
+                        }
+
+                        container.appendChild(detectionStatus);
+                    });
+                } catch (error) {
+                    console.error('Error fetching API:', error);
+                    responseContainer.textContent = '智能检测失败，请查看后台自动监考程序！';
+                }
+            };
+
+            // Initial fetch and display API response
+            fetchAndDisplayAPIResponse();
+
+            // Set up an interval to fetch and display API response every 20 seconds, starting after 60 seconds
+            setTimeout(() => {
+                fetchAndDisplayAPIResponse(); // Fetch immediately after 60 seconds
+                setInterval(fetchAndDisplayAPIResponse, 20000); // Then fetch every 20 seconds
+            }, 60000);
+
+            // Create and display student label on video 
+            const videosContainer = document.getElementById('videos-container');
+            for (let i = 1; i <= roomSize; i++) {
+                const videoContainer = document.createElement('div');
+                videoContainer.classList.add('video-container');
+
+                const studentLabel = document.createElement('div');
+                studentLabel.classList.add('student-label');
+                studentLabel.textContent = `Student ${i}`;
+
+                const videoPlayer = document.createElement('video');
+                videoPlayer.controls = true;
+                videoPlayer.autoplay = true;
+                videoPlayer.playsinline = true;
+
+                const videoUrl = `https://www.webrtcpull.website/${appParam}/${i}.m3u8`;
+
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(videoUrl);
+                    hls.attachMedia(videoPlayer);
+
+                    videoPlayer.addEventListener('loadedmetadata', () => {
+                        videoPlayer.play();
+                    });
+                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    videoPlayer.src = videoUrl;
+
+                    videoPlayer.addEventListener('loadedmetadata', () => {
+                        videoPlayer.play();
+                    });
+                } else {
+                    console.error(`HLS is not supported in this browser for room ${i}.`);
+                }
+
+                videoContainer.appendChild(studentLabel);
+                videoContainer.appendChild(videoPlayer);
+                videosContainer.appendChild(videoContainer);
+            }
+        });
     </script>
 </body>
 </html>
