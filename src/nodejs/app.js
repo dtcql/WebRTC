@@ -21,8 +21,8 @@ app.get('/', async (req, res) => {
     const roomSize = parseInt(req.query.room_size) || 1;
 
     // 完善您的阿里云API访问配置
-    const accessKeyId = 'LTAI5t6Xwpekm6YRP39ah5qs';
-    const accessKeySecret = 'RKdXPh7sEZKpPE2eL88s5lWl0WtojH';
+    const accessKeyId = '***';
+    const accessKeySecret = '***';
 
     const config = new OpenapiClient.Config({
         accessKeyId,
