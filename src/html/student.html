@@ -14,10 +14,31 @@
         let wsParam1 = '';  // 初始化为一个空字符串
         let wsParam2 = '';  // 初始化为一个空字符串
 
-        // 获取用户摄像头权限
+ // 获取用户摄像头权限
         async function startStreaming() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                let width, height;
+                // 根据屏幕方向设置视频分辨率
+                if (window.innerWidth >= window.innerHeight) {
+                    // 横屏模式
+                    width = 640;
+                    height = 480;
+                } else {
+                    // 竖屏模式
+                    width = 480;
+                    height = 640;
+                }
+
+                const constraints = {
+                    video: {
+                        width: { exact: width },
+                        height: { exact: height },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoPlayer.srcObject = stream;
                 return stream;
             } catch (error) {
@@ -69,6 +90,8 @@
                 console.log('mediaRecorder.ondataavailable is on');
                 if (event.data.size > 0) {
                     console.log('Sending video data to WebSocket server');
+					console.log('--------------------------------------------------------');
+					console.log('event.data is：', event.data);
                     ws.send(event.data);
                 } else {
                     console.log('event.data.size is', event.data.size);

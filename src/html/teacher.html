@@ -101,25 +101,24 @@
 
                     // Generate output based on responseData and set it directly to responseContainer.textContent
                     let responseText = '';
-					let studentOutput = '';
+                    let studentOutput = '';
 
                     for (const studentId in responseData) {
-		                const studentData = responseData[studentId];
-						if (studentData.phone === 1) {
-                          studentOutput = `${studentId}: 在打电话 \n`;
-						  responseText += studentOutput + '\n';
-						}
-					    if (studentData.earphone === 1){
-						  studentOutput = `${studentId}: 在带耳机 \n`;
-                          responseText += studentOutput + '\n';
-						}
-						
+                        const studentData = responseData[studentId];
+                        if (studentData.phone === 1) {
+                            studentOutput = `${studentId}: 在打电话 \n`;
+                            responseText += studentOutput + '\n';
+                        }
+                        if (studentData.earphone === 1) {
+                            studentOutput = `${studentId}: 在带耳机 \n`;
+                            responseText += studentOutput + '\n';
+                        }
 
                         // Store student data in the array
                         studentDataArray[studentId] = studentData;
                     }
-                    
-					//warning information on top of the page to alert 
+
+                    // Warning information on top of the page to alert 
                     responseContainer.textContent = responseText;
 
                     // Get an array of student IDs from studentDataArray
@@ -165,13 +164,55 @@
             // Initial fetch and display API response
             fetchAndDisplayAPIResponse();
 
-            // Set up an interval to fetch and display API response every 20 seconds, starting after 60 seconds
-            setTimeout(() => {
-                fetchAndDisplayAPIResponse(); // Fetch immediately after 60 seconds
-                setInterval(fetchAndDisplayAPIResponse, 20000); // Then fetch every 20 seconds
-            }, 60000);
+            // Set up an interval to fetch and display API response every 10 seconds, starting after 10 seconds
+            setInterval(fetchAndDisplayAPIResponse, 10000);
 
-            // Create and display student label on video 
+            // Function to retry loading HLS video URL
+            const retryLoadVideo = (videoPlayer, videoUrl) => {
+                console.log('进retryLoadVideo了!')
+
+                const loadVideo = async () => {
+                    console.log('进loadVideo了!')
+
+                    // Check if the video URL exists
+                    const response = await fetch(videoUrl, {
+                        method: 'HEAD'
+                    });
+
+                    if (response.status === 200) {
+                        // Video URL exists, proceed with loading
+                        if (Hls.isSupported()) {
+                            const hls = new Hls();
+                            hls.loadSource(videoUrl);
+                            hls.attachMedia(videoPlayer);
+                        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                            videoPlayer.src = videoUrl;
+                        } else {
+                            console.error(`HLS is not supported in this browser.`);
+                        }
+
+                        // Add error event listener to handle video loading errors
+                        videoPlayer.addEventListener('error', () => {
+                            console.log('视频加载失败，将在3秒后重新尝试加载...');
+                            setTimeout(loadVideo, 3000);
+                        });
+
+                        // Add canplay event listener to play the video when it's ready
+                        videoPlayer.addEventListener('canplay', () => {
+                            videoPlayer.play();
+                            console.log('进play了!');
+                        });
+                    } else {
+                        // Video URL does not exist, retry after 5 seconds
+                        console.log('网络文件不存在，将在3秒后重新尝试加载...');
+                        setTimeout(loadVideo, 3000);
+                    }
+                };
+
+                loadVideo(); // Initial load
+            };
+
+            // Create and display student label on video
             const videosContainer = document.getElementById('videos-container');
             for (let i = 1; i <= roomSize; i++) {
                 const videoContainer = document.createElement('div');
@@ -185,30 +226,14 @@
                 videoPlayer.controls = true;
                 videoPlayer.autoplay = true;
                 videoPlayer.playsinline = true;
+                videoPlayer.muted = true;
 
                 const videoUrl = `https://www.webrtcpull.website/${appParam}/${i}.m3u8`;
-
-                if (Hls.isSupported()) {
-                    const hls = new Hls();
-                    hls.loadSource(videoUrl);
-                    hls.attachMedia(videoPlayer);
-
-                    videoPlayer.addEventListener('loadedmetadata', () => {
-                        videoPlayer.play();
-                    });
-                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                    videoPlayer.src = videoUrl;
-
-                    videoPlayer.addEventListener('loadedmetadata', () => {
-                        videoPlayer.play();
-                    });
-                } else {
-                    console.error(`HLS is not supported in this browser for room ${i}.`);
-                }
 
                 videoContainer.appendChild(studentLabel);
                 videoContainer.appendChild(videoPlayer);
                 videosContainer.appendChild(videoContainer);
+                retryLoadVideo(videoPlayer, videoUrl);
             }
         });
     </script>

@@ -41,16 +41,16 @@ if (isMainThread) {
 } else {
     const { wsParam1, wsParam2 } = workerData;
     const rtmpUrl = `rtmp://www.webrtcpush.website/${wsParam1}/${wsParam2}`;
-
     let ffmpegProcess;
 
     parentPort.on('message', (message) => {
+        console.log('message is:', message);
         if (message === 'close') {
             if (ffmpegProcess && ffmpegProcess.stdin) {
                 ffmpegProcess.stdin.end(); // 确保 stdin 存在再关闭
             }
         } else if (message instanceof Uint8Array) {
-            if (!ffmpegProcess) {
+            if (!ffmpegProcess || ffmpegProcess.killed) {
                 ffmpegProcess = spawn('ffmpeg', [
                     '-f', 'webm',
                     '-i', 'pipe:0',

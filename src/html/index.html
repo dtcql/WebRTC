@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exam Links</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="vue.js"></script>
+    <script src="qrcode.min.js"></script>
 </head>
 <body>
     <div id="app">
@@ -25,18 +27,82 @@
             <div class="teacher-link">
                 <h2>教师入口</h2>
                 <p>
-                教师链接：<a :href="teacherLink" target="_blank">{{ teacherLink }}</a>
+                    教师链接：<a :href="teacherLink" target="_blank">{{ teacherLink }}</a>
                 </p>
+                <div :id="'teacher-qrcode'"></div> <!-- 教师二维码容器 -->
             </div>
             <div class="student-links">
                 <h2>学生入口</h2>
-                <p v-for="(link, index) in studentLinks" :key="index">
-                   {{ '学生' + (index + 1) + '链接' }}：<a :href="link" target="_blank">{{ link }}</a>
-                </p>
+                <div v-for="(link, index) in studentLinks" :key="index">
+                    <p>
+                        {{ '学生' + (index + 1) + '链接' }}：<a :href="link" target="_blank">{{ link }}</a>
+                    </p>
+                    <div :id="'student-qrcode-' + (index + 1)"></div> <!-- 学生二维码容器 -->
+                </div>
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <script src="app.js"></script>
+    <script>
+        new Vue({
+            data: {
+                examName: '', // 初始化考试名称
+                studentCount: '', // 初始化学生数量
+                teacherLink: '', // 初始化教师链接
+                studentLinks: [], // 初始化学生链接
+                currentPage: 'initial',
+                showErrorMessage: false,
+            },
+            methods: {
+                validateAndShowLinks() {
+                    if (this.studentCount !== '' && !this.isNumeric(this.studentCount)) {
+                        this.showErrorMessage = true;
+                    } else {
+                        this.showErrorMessage = false;
+                        this.generateLinks();
+                    }
+                },
+                generateLinks() {
+                    if (this.isNumeric(this.studentCount)) {
+                        this.teacherLink = `https://47.103.117.247/teacher?exam_id=${encodeURIComponent(this.examName)}&room_size=${this.studentCount}`;
+                        this.studentLinks = [];
+                        for (let i = 1; i <= parseInt(this.studentCount); i++) {
+                            const studentLink = `https://47.103.117.247/student?exam_id=${encodeURIComponent(this.examName)}&stu_id=${i}`;
+                            this.studentLinks.push(studentLink);
+                        }
+                        this.currentPage = 'links';
+
+                        // 在数据更新并渲染完毕后生成二维码
+                        this.$nextTick(() => {
+                            this.generateQRCode(this.teacherLink, 'teacher-qrcode'); // 生成教师的二维码
+                            this.studentLinks.forEach((link, index) => {
+                                const studentQRCodeId = `student-qrcode-${index + 1}`;
+                                this.generateQRCode(link, studentQRCodeId); // 生成学生的二维码
+                            });
+                        });
+                    }
+                },
+                isNumeric(value) {
+                    return /^\d+$/.test(value);
+                },
+                generateQRCode(link, elementId) {
+                    const qrcodeElement = document.getElementById(elementId);
+                    if (qrcodeElement) {
+                        const qrcode = new QRCode(qrcodeElement, {
+                            text: link,
+                            width: 128,
+                            height: 128,
+                        });
+                    }
+                },
+            },
+            mounted() {
+                // 在页面加载时，可以进行一些初始化工作
+                this.examName = ''; // 例如，将考试名称重置为空
+                this.studentCount = ''; // 重置学生数量为空
+                this.teacherLink = ''; // 重置教师链接为空
+                this.studentLinks = []; // 清空学生链接
+            },
+        }).$mount('#app');
+    </script>
 </body>
 </html>

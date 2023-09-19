@@ -53,6 +53,15 @@ sudo rpm -Uvh https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-relea
 sudo yum install ffmpeg
 ```
 
+or 
+```
+https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz 
+https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-i686-static.tar.xz
+
+tar -xvf ffmpeg-release-amd64-static.tar.xz
+tar -xvf ffmpeg-release-i686-static.tar.xz
+```
+
 ## 2.前端代码
 
 index.html
